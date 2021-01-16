@@ -20,16 +20,16 @@ void MainGame::Init()
 	mCannon.x = WINSIZEX / 2;
 	mCannon.y = WINSIZEY;
 	mCannon.angle = PI / 2;
-	mCannon.connonLength = 100.f;
+	mCannon.connonLength = 105.f;
 	mCannon.radius = 50.f;
 
 	target.x = WINSIZEX / 2;
-	target.y = 50;
+	target.y = 300;
 	target.radius = (target.y+700) * 0.025;
 
 	mGravity = 0.98f;
 
-	cannonPow = 20;
+	cannonPow = 21;
 
 	mDegree = PI / 2;
 
@@ -70,21 +70,32 @@ Update : 매 프레임 실행되는 함수, 여기서 연산 처리 한다.
 void MainGame::Update()
 {
 	frameRate ++;
+	//canon shooting power control
+	if (Input::GetInstance()->GetKey('W') and cannonPow <= 40) 
+	{ if(Input::GetInstance()->GetKey(VK_SHIFT)) { cannonPow +=0.025; } else cannonPow += 0.25; }
+	if (Input::GetInstance()->GetKey('S') and cannonPow >= 20.25) 
+	{ if (Input::GetInstance()->GetKey(VK_SHIFT)) { cannonPow -= 0.025; } else cannonPow -= 0.25; }
+	//cannon angle control
+	if (Input::GetInstance()->GetKey('A') and mDegree < PI - 0.2) 
+	{ if (Input::GetInstance()->GetKey(VK_SHIFT)) {mDegree += 0.001f;} else mDegree += 0.01f;}
+	if (Input::GetInstance()->GetKey('D') and mDegree > 0.2) 
+	{ if (Input::GetInstance()->GetKey(VK_SHIFT)) { mDegree -= 0.001f;} else mDegree -= 0.01f;}
 
-	if (Input::GetInstance()->GetKey(VK_UP) and cannonPow <= 40) { cannonPow += 0.25; }//canon shooting power control
-	if (Input::GetInstance()->GetKey(VK_DOWN) and cannonPow >= 10) { cannonPow -= 0.25; }
-
-	if (Input::GetInstance()->GetKey(VK_LEFT) and mDegree < PI - 0.2) { mDegree += 0.01f; }//cannon angle control
-	if (Input::GetInstance()->GetKey(VK_RIGHT) and mDegree > 0.2) { mDegree -= 0.01f; }
-
-	mCannon.connonLength = cannonPow*5;
+	if (mCannon.connonLength < cannonPow * 5) {
+		mCannon.connonLength += 1;
+	}
+	if (mCannon.connonLength > cannonPow * 5) {
+		mCannon.connonLength -= 1;
+	}
 
 	mCannon.cannonEndX = mCannon.x+cosf(mDegree) * mCannon.connonLength; //cannon angle movement
 	mCannon.cannonEndY = mCannon.y-sinf(mDegree) * mCannon.connonLength;
 
-	if (Input::GetInstance()->GetKeyDown(VK_SPACE)) 
+	if (Input::GetInstance()->GetKeyDown(VK_SPACE) and mCannon.connonLength>100) //firing action
 	{
-		X.push_back({ mCannon.cannonEndX, mCannon.cannonEndY, 30, mDegree, -cannonPow * sinf(mDegree),cannonPow * cosf(mDegree)});
+		X.push_back({ mCannon.cannonEndX, mCannon.cannonEndY, 30, mDegree, -cannonPow * sinf(mDegree),cannonPow * cosf(mDegree)});//bullet starting physics set
+
+		mCannon.connonLength -= cannonPow * 2; //gun barrel back movement
 	}
 
 	for (int i = 0; i < X.size(); i++) { //bullet physics
@@ -133,12 +144,12 @@ void MainGame::Update()
 			score++;
 		}
 	}
-	for (int i = 0; i < X.size(); i++) {
-		if (X[i].radius < 16) {
-
-			X[i].effect = RectMakeCenter(X[i].x, X[i].y, 40, 40);
-		}
-	}
+	//for (int i = 0; i < X.size(); i++) {
+	//	if (X[i].radius < 15.75) {
+	//
+	//		X[i].effect = RectMakeCenter(X[i].x, X[i].y, 40, 40);
+	//	}
+	//}
 
 
 
@@ -162,6 +173,7 @@ void MainGame::Render(HDC hdc)
 		HBRUSH white;
 		HPEN newP;
 		HPEN oldP;
+		SetBkMode(backDC, TRANSPARENT);
 
 		for (int i = 0; i < 100; i++) { //bkground 2.5D effect
 			color = CreateSolidBrush(RGB(0, 2*i, 0));
@@ -193,17 +205,23 @@ void MainGame::Render(HDC hdc)
 		wstring scoreT = L"Score : " + to_wstring(score);
 		TextOut(backDC, WINSIZEX / 2 - 25, WINSIZEY / 2 - 250, scoreT.c_str(), scoreT.length());
 
-		wstring exp1 = L"[Anti_Clockwise : Left Arrow] [Clockwise : Right Arrow]";
+		wstring exp1 = L"조작: WASD";
 		TextOut(backDC, 100, WINSIZEY / 2 - 100, exp1.c_str(), exp1.length());
 
-		wstring exp = L"[Barrel Up : Up Arrow]     [Barrel Down : Down Arrow]";
+		wstring exp = L"세밀조작: SHIFT + WASD";
 		TextOut(backDC, 100, WINSIZEY / 2-50, exp.c_str(), exp.length());
 
-		wstring cP = L"Cannon Firing Angle : " + to_wstring(cannonPow);
+		wstring cP = L"현재 발사 각 " + to_wstring(cannonPow*1.2);
 		TextOut(backDC, 100 , WINSIZEY / 2, cP.c_str(), cP.length());
 
-		wstring windT = L"Present Wind Level : " + to_wstring(wind*100);
-		TextOut(backDC, 100, WINSIZEY / 2+50, windT.c_str(), windT.length());
+		wstring sT = L"사격 : SPACE ";
+		TextOut(backDC, 100, WINSIZEY / 2+50, sT.c_str(), sT.length());
+
+		wstring caution = L"!! 과열 주의 바람 !! ";
+		TextOut(backDC, 100, WINSIZEY / 2 + 100, caution.c_str(), caution.length());
+
+		wstring windT = L"풍속 및 풍향";
+		TextOut(backDC, 600, WINSIZEY / 2+50, windT.c_str(), windT.length());
 		
 		if (wind < 0) { //wind level visulization render (plus vector)
 			for (int i = 4; i > 4+wind*10; i--) {
@@ -287,6 +305,24 @@ void MainGame::Render(HDC hdc)
 			SelectObject(backDC, white);
 			DeleteObject(color);
 		}
+
+		wstring overheat = L"포신 : 정상";
+		if (mCannon.connonLength < 100) { 
+			overheat = L"포신 : 과열!"; 
+
+			color = CreateSolidBrush(RGB(255, 0, 0));
+			white = (HBRUSH)SelectObject(backDC, color);
+			RenderEllipse(backDC, mCannon.x, mCannon.y, mCannon.radius);
+			SelectObject(backDC, white);
+			DeleteObject(color);
+		}
+		HFONT newF = CreateFontW(40, 0, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 3, 2, 1, VARIABLE_PITCH | FF_ROMAN, NULL);
+		HFONT oldF = (HFONT)SelectObject(backDC, newF);
+		TextOut(backDC, 90, WINSIZEY / 2 - 180, overheat.c_str(), overheat.size());
+		SelectObject(backDC, oldF);
+		DeleteObject(newF);
+
+		
 
 	}
 	//====================================================

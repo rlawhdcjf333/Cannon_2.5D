@@ -33,7 +33,6 @@ void MainGame::Init()
 
 	mDegree = PI / 2;
 
-	wind = 0;
 	wind = -0.37f;
 
 	frameRate = 0;
